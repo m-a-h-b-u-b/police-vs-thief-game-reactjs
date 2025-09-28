@@ -1,0 +1,254 @@
+<!-- 
+Police vs Thief Game : React Based
+----------------------------------
+License : Apache 2.0 License
+Author  : Md Mahbubur Rahman
+URL     : https://m-a-h-b-u-b.github.io
+GitHub  : https://github.com/m-a-h-b-u-b/police-vs-thief-game-reactjs
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Police vs Thieves: Arcade Edition</title>
+<style>
+body { 
+    margin:0; 
+    background:#222; 
+    color:white; 
+    font-family:sans-serif; 
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    overflow:hidden;
+    flex-direction:column;
+}
+
+#gameCanvas {
+    border:2px solid white;
+}
+
+#info { 
+    position:absolute; 
+    top:10px; 
+    left:10px; 
+    font-size:18px; 
+}
+
+#gameOver { 
+    position:absolute; 
+    top:50%; 
+    left:50%; 
+    transform:translate(-50%,-50%); 
+    color:red; 
+    font-size:36px; 
+    display:none; 
+    text-align:center; 
+}
+
+button { 
+    margin-top:20px; 
+    padding:10px 20px; 
+    font-size:18px; 
+}
+
+#startScreen { 
+    position:absolute; 
+    top:50%; 
+    left:50%; 
+    transform:translate(-50%,-50%); 
+    text-align:center; 
+    font-size:36px; 
+    color:lime; 
+    cursor:pointer; 
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<div id="info">Score: 0 | Level: 1 | Time: 0s | Misses: 0</div>
+<div id="gameOver">Game Over!<br/><div id="highScores"></div><button onclick="restartGame()">Restart</button></div>
+<div id="startScreen">Police vs Thieves<br/>Click to Start</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Game state
+let score=0, level=1, time=0, misses=0;
+const maxMisses=15; // increased max misses
+let levelDuration=30, levelTimer=0;
+let flash=false, gameOver=false, gameStarted=false, countdown=3;
+
+// Player
+const police={x:100, y:100, size:25, speed:5};
+
+// Thieves
+let thieves=[];
+function createThieves(num){
+    thieves=[];
+    for(let i=0;i<num;i++){
+        thieves.push({x:Math.random()*(canvas.width-40)+20, y:Math.random()*(canvas.height-40)+20, size:20, speed:2+level*0.5, slowed:false});
+    }
+}
+createThieves(3);
+
+// Power-ups
+let powerUps=[];
+function spawnPowerUp(){
+    const types=['slow','freeze'];
+    const type=types[Math.floor(Math.random()*types.length)];
+    powerUps.push({x: Math.random()*(canvas.width-40)+20, y: Math.random()*(canvas.height-40)+20, size:15, type:type, duration:5000, active:false});
+}
+
+// Controls
+const keys={};
+window.addEventListener('keydown', e=>keys[e.key]=true);
+window.addEventListener('keyup', e=>keys[e.key]=false);
+
+// Sound setup (online free sound)
+const catchSound = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
+catchSound.volume = 0.5;
+let soundAllowed=false;
+
+// Start game
+const startScreen = document.getElementById('startScreen');
+startScreen.addEventListener('click',()=>{
+    soundAllowed = true; // enable sound
+    gameStarted = true;
+    startScreen.style.display='none';
+    startCountdown();
+}, {once:true});
+
+// Countdown (fix: don't show after game over)
+function startCountdown(){
+    if(gameOver) return;  // Prevent countdown if game is over
+    countdown=3;
+    const countdownInterval=setInterval(()=>{
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='white';
+        ctx.font='72px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText(countdown>0?countdown:'GO!',canvas.width/2,canvas.height/2);
+        countdown--;
+        if(countdown< -1){ 
+            clearInterval(countdownInterval); 
+            if(!gameOver) update(); // Only start game loop if not game over
+        }
+    },1000);
+}
+
+// Timer
+setInterval(()=>{
+    if(gameStarted && !gameOver){
+        time++;
+        levelTimer++;
+        document.getElementById('info').innerText=`Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${misses}`;
+        if(levelTimer>=levelDuration && !gameOver){ 
+            level++; levelTimer=0;
+            createThieves(3+level);
+            spawnPowerUp();
+            startCountdown();
+        }
+    }
+},1000);
+
+// Draw functions
+function drawCharacter(char,color,label){
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.arc(char.x,char.y,char.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='white';
+    ctx.font='14px sans-serif';
+    ctx.fillText(label,char.x-char.size/2,char.y-char.size-5);
+}
+
+function drawPowerUp(p){
+    ctx.fillStyle=p.type==='slow'?'cyan':'magenta';
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='white';
+    ctx.font='12px sans-serif';
+    ctx.fillText(p.type,p.x-12,p.y+4);
+}
+
+function drawFlash(){ if(flash){ ctx.fillStyle='rgba(255,0,0,0.5)'; ctx.fillRect(0,0,canvas.width,canvas.height); flash=false; } }
+
+// Update loop
+function update(){
+    if(gameOver) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Police movement
+    if(keys['ArrowUp']) police.y=Math.max(police.size,police.y-police.speed);
+    if(keys['ArrowDown']) police.y=Math.min(canvas.height-police.size,police.y+police.speed);
+    if(keys['ArrowLeft']) police.x=Math.max(police.size,police.x-police.speed);
+    if(keys['ArrowRight']) police.x=Math.min(canvas.width-police.size,police.x+police.speed);
+
+    // Thieves
+    thieves.forEach(thief=>{
+        if(!thief.slowed){
+            thief.x += (Math.random()-0.5)*thief.speed*2;
+            thief.y += (Math.random()-0.5)*thief.speed*2;
+        }
+        thief.x=Math.max(thief.size, Math.min(canvas.width-thief.size, thief.x));
+        thief.y=Math.max(thief.size, Math.min(canvas.height-thief.size, thief.y));
+
+        const dx=thief.x-police.x, dy=thief.y-police.y;
+        const dist=Math.hypot(dx,dy);
+        if(dist<police.size+thief.size){
+            score++; flash=true;
+            if(soundAllowed){ catchSound.currentTime=0; catchSound.play(); }
+            thief.x=Math.random()*(canvas.width-40)+20;
+            thief.y=Math.random()*(canvas.height-40)+20;
+            if(score%5===0){ level++; createThieves(3+level); spawnPowerUp(); startCountdown(); }
+        }
+        if(Math.random()<0.002){ misses++; if(misses>=maxMisses){ gameOver=true; showHighScores(); document.getElementById('gameOver').style.display='block'; } }
+    });
+
+    // Power-ups
+    powerUps.forEach(p=>{
+        drawPowerUp(p);
+        const dx=p.x-police.x, dy=p.y-police.y;
+        const dist=Math.hypot(dx,dy);
+        if(dist<police.size+p.size && !p.active){
+            p.active=true;
+            if(p.type==='slow'){ thieves.forEach(t=>t.slowed=true); setTimeout(()=>thieves.forEach(t=>t.slowed=false),p.duration);}
+            else if(p.type==='freeze'){ const orig=police.speed; police.speed=0; setTimeout(()=>police.speed=orig,p.duration);}
+        }
+    });
+
+    drawCharacter(police,'blue','Police');
+    thieves.forEach(t=>drawCharacter(t,'red','Thief'));
+    drawFlash();
+
+    if(!gameOver) requestAnimationFrame(update);
+}
+
+// High scores
+function showHighScores(){
+    let scores = JSON.parse(localStorage.getItem('highScores')||'[]');
+    scores.push(score); 
+    scores.sort((a,b)=>b-a); 
+    const highest = scores[0] || 0; // only show the highest
+    localStorage.setItem('highScores', JSON.stringify([highest])); // store only highest
+    document.getElementById('highScores').innerHTML = 'Highest Score:<br/>' + highest;
+}
+
+// Restart
+function restartGame(){
+    score=0; level=1; time=0; misses=0; gameOver=false;
+    police.x=100; police.y=100;
+    createThieves(3); powerUps=[];
+    document.getElementById('gameOver').style.display='none';
+    document.getElementById('info').innerText=`Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${misses}`;
+    startCountdown();
+}
+</script>
+</body>
+</html>
