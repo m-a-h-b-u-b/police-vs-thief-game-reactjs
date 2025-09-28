@@ -70,7 +70,7 @@ button {
 <body>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <div id="info">Score: 0 | Level: 1 | Time: 0s | Misses: 0</div>
-<div id="gameOver">Game Over!<br/><div id="highScores"></div><button onclick="restartGame()">Restart</button></div>
+<div id="gameOver"></div>
 <div id="startScreen">Police vs Thieves<br/>Click to Start</div>
 
 <script>
@@ -123,9 +123,9 @@ startScreen.addEventListener('click',()=>{
     startCountdown();
 }, {once:true});
 
-// Countdown (fix: don't show after game over)
+// Countdown
 function startCountdown(){
-    if(gameOver) return;  // Prevent countdown if game is over
+    if(gameOver) return;
     countdown=3;
     const countdownInterval=setInterval(()=>{
         ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -136,7 +136,7 @@ function startCountdown(){
         countdown--;
         if(countdown< -1){ 
             clearInterval(countdownInterval); 
-            if(!gameOver) update(); // Only start game loop if not game over
+            if(!gameOver) update();
         }
     },1000);
 }
@@ -208,7 +208,20 @@ function update(){
             thief.y=Math.random()*(canvas.height-40)+20;
             if(score%5===0){ level++; createThieves(3+level); spawnPowerUp(); startCountdown(); }
         }
-        if(Math.random()<0.002){ misses++; if(misses>=maxMisses){ gameOver=true; showHighScores(); document.getElementById('gameOver').style.display='block'; } }
+        if(Math.random()<0.002){ 
+            misses++; 
+            if(misses>=maxMisses){ 
+                gameOver = true; 
+                document.getElementById('gameOver').style.display='block';
+                document.getElementById('gameOver').innerHTML = `
+                    Game Over!<br/>
+                    Misses: ${maxMisses}<br/>
+                    <div id="highScores"></div>
+                    <button onclick="restartGame()">Restart</button>
+                `;
+                showHighScores();
+            } 
+        }
     });
 
     // Power-ups
