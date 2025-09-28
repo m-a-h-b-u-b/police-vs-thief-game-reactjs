@@ -65,6 +65,23 @@ button {
     color:lime; 
     cursor:pointer; 
 }
+
+#footer {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 16px;
+    color: white;
+    font-family: sans-serif;
+}
+#footer a {
+    text-decoration: none;
+    color: cyan;
+}
+#footer a:hover {
+    text-decoration: underline;
+}
 </style>
 </head>
 <body>
@@ -72,6 +89,7 @@ button {
 <div id="info">Score: 0 | Level: 1 | Time: 0s | Misses: 0</div>
 <div id="gameOver"></div>
 <div id="startScreen">Police vs Thieves<br/>Click to Start</div>
+<div id="footer">Game Developed by Md Mahbubur Rahman <a href="https://m-a-h-b-u-b.github.io/" target="_blank">https://m-a-h-b-u-b.github.io/</a></div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
