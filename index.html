@@ -79,7 +79,7 @@ const ctx = canvas.getContext('2d');
 
 // Game state
 let score=0, level=1, time=0, misses=0;
-const maxMisses=15; // increased max misses
+const maxMisses=15;
 let levelDuration=30, levelTimer=0;
 let flash=false, gameOver=false, gameStarted=false, countdown=3;
 
@@ -109,7 +109,7 @@ const keys={};
 window.addEventListener('keydown', e=>keys[e.key]=true);
 window.addEventListener('keyup', e=>keys[e.key]=false);
 
-// Sound setup (online free sound)
+// Sound setup
 const catchSound = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
 catchSound.volume = 0.5;
 let soundAllowed=false;
@@ -117,7 +117,7 @@ let soundAllowed=false;
 // Start game
 const startScreen = document.getElementById('startScreen');
 startScreen.addEventListener('click',()=>{
-    soundAllowed = true; // enable sound
+    soundAllowed = true;
     gameStarted = true;
     startScreen.style.display='none';
     startCountdown();
@@ -141,14 +141,17 @@ function startCountdown(){
     },1000);
 }
 
-// Timer
+// Timer & Info Update
 setInterval(()=>{
     if(gameStarted && !gameOver){
         time++;
         levelTimer++;
-        document.getElementById('info').innerText=`Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${misses}`;
-        if(levelTimer>=levelDuration && !gameOver){ 
-            level++; levelTimer=0;
+        const displayedMisses = Math.min(misses, maxMisses);
+        document.getElementById('info').innerText=
+            `Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${displayedMisses}`;
+        if(levelTimer>=levelDuration){ 
+            level++; 
+            levelTimer=0;
             createThieves(3+level);
             spawnPowerUp();
             startCountdown();
@@ -208,9 +211,13 @@ function update(){
             thief.y=Math.random()*(canvas.height-40)+20;
             if(score%5===0){ level++; createThieves(3+level); spawnPowerUp(); startCountdown(); }
         }
-        if(Math.random()<0.002){ 
+        if(Math.random() < 0.002){ 
             misses++; 
-            if(misses>=maxMisses){ 
+            const displayedMisses = Math.min(misses, maxMisses);
+            document.getElementById('info').innerText=
+                `Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${displayedMisses}`;
+
+            if(misses >= maxMisses){ 
                 gameOver = true; 
                 document.getElementById('gameOver').style.display='block';
                 document.getElementById('gameOver').innerHTML = `
@@ -248,8 +255,8 @@ function showHighScores(){
     let scores = JSON.parse(localStorage.getItem('highScores')||'[]');
     scores.push(score); 
     scores.sort((a,b)=>b-a); 
-    const highest = scores[0] || 0; // only show the highest
-    localStorage.setItem('highScores', JSON.stringify([highest])); // store only highest
+    const highest = scores[0] || 0;
+    localStorage.setItem('highScores', JSON.stringify([highest]));
     document.getElementById('highScores').innerHTML = 'Highest Score:<br/>' + highest;
 }
 
@@ -259,7 +266,8 @@ function restartGame(){
     police.x=100; police.y=100;
     createThieves(3); powerUps=[];
     document.getElementById('gameOver').style.display='none';
-    document.getElementById('info').innerText=`Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${misses}`;
+    document.getElementById('info').innerText=
+        `Score: ${score} | Level: ${level} | Time: ${time}s | Misses: ${misses}`;
     startCountdown();
 }
 </script>
